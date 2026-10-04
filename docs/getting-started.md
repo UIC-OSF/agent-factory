@@ -24,7 +24,14 @@ cd NAME
 scripts/adopt.sh . --project "Name" --repo OWNER/NAME --human your-github-login --maintainer agent-login --description "One plain sentence."
 ```
 
-Existing project: see [Use it](https://github.com/UIC-OSF/software-factory-blocks#use-it) in the README. `adopt.sh` lists any files it did not overwrite; merge those by hand.
+Existing project:
+
+```sh
+git clone --depth 1 https://github.com/UIC-OSF/software-factory-blocks /tmp/software-factory-blocks
+/tmp/software-factory-blocks/scripts/adopt.sh path/to/project --project "Name" --repo OWNER/NAME --human your-github-login --maintainer agent-login --description "One plain sentence."
+```
+
+`adopt.sh` never overwrites a file. It lists the ones it skipped; merge those by hand.
 
 Then make it yours:
 

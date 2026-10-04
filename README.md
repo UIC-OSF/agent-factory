@@ -1,67 +1,75 @@
 # UIC OSF's AI-Powered Software Factory Building Blocks
 
-A starting point for open source projects maintained by AI agents, in public.
+A template for open source projects maintained by AI agents, in public, with people in charge.
+
+## Get started
+
+Paste this into your AI agent (Claude Code, or any agent that can run commands):
+
+```text
+Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/software-factory-blocks/blob/main/AGENT-SETUP.md
+```
+
+It asks whether this is a new repo or an existing project, does every step it can, and tells you what it needs from you. About 45 minutes.
+
+**What you need first:**
+
+- Admin on the GitHub org for the repo.
+- An AWS account with Bedrock.
+- A second GitHub account for the maintainer agent, for example `yourname-agent`.
+- A machine that stays on, with Claude Code, to run the maintainer.
+
+Prefer to do it yourself? Follow the [getting-started guide](docs/getting-started.md).
+
+## How it works
 
 Every project gets three agents:
 
-- **Triage.** A GitHub Action that reads each new issue, labels it, asks the reporter for anything missing, and tags the owners when it is ready.
-- **Maintainer.** A Claude Code session on an hourly loop, with its own GitHub account. It works on the issues an owner assigns it: builds the fix, answers review, and merges. On that work, it has the final say.
-- **Reviewer.** A GitHub Action that reviews every PR adversarially. Its verdict is advice to the maintainer.
+| Agent | Runs | Does |
+|---|---|---|
+| **Triage** | GitHub Actions | Labels each new issue, asks for missing details, and tags the owners when it is ready. |
+| **Maintainer** | Claude Code, hourly, as its own GitHub account | Builds the issues an owner assigns it, answers review, and merges. |
+| **Reviewer** | GitHub Actions | Reviews every PR adversarially. Its verdict is advice to the maintainer. |
 
-People stay in charge. Owners choose what gets worked on, approve risky changes, and can stop every agent with one switch. These [safety rails](agents/rails.md) are enforced by GitHub where it can.
+An issue goes from report to merge like this:
 
-Specialist agents (feature work, benchmarks, docs) are added as seats when a project needs them.
+1. Someone opens an issue.
+2. Triage gets it ready and tags the owners.
+3. An owner assigns it to the maintainer. Nothing starts without this.
+4. The maintainer opens a PR, and the reviewer reviews it.
+5. The maintainer merges.
 
-This setup comes from running [equalify-iris](https://github.com/EqualifyEverything/equalify-iris) and [equalify-iris-pdf](https://github.com/EqualifyEverything/equalify-iris-pdf) this way. The goal is a framework to grow a whole AI-Powered Software Factory on: automated maintenance of production code.
+People stay in charge. Owners choose the work, approve risky changes, and can stop every agent with one switch. These [safety rails](agents/rails.md) are enforced by GitHub where it can.
+
+Add more agents (feature work, benchmarks, docs) as a project needs them: [agents/specialist.md](agents/specialist.md).
 
 ## Values
 
-Open source, transparent, accessible, plain. Agent instructions are files in the repo, so anyone can read what the agents are told. Decisions happen on issues and PRs. Writing is short.
-
-## Use it
-
-**Easiest:** ask your AI agent. It works out the rest and asks you for what it needs:
-
-> Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/software-factory-blocks/blob/main/AGENT-SETUP.md
-
-**By hand, new project:** click **Use this template** on GitHub, clone the new repo, then:
-
-```sh
-scripts/adopt.sh . --project "Name" --repo owner/name --human your-github-login --maintainer agent-login --description "One line."
-```
-
-**By hand, existing project:**
-
-```sh
-git clone https://github.com/UIC-OSF/software-factory-blocks /tmp/software-factory-blocks
-/tmp/software-factory-blocks/scripts/adopt.sh path/to/project --project "Name" --repo owner/name --human your-github-login --maintainer agent-login
-```
-
-It never overwrites a file the project already has; it lists them for you to merge.
-
-Then follow [docs/getting-started.md](docs/getting-started.md): Bedrock access, the Claude app, access and branch rules, a test PR, and starting the maintainer.
+- **Open source.** AGPL-3.0-or-later.
+- **Transparent.** Agent instructions are files in the repo, and decisions happen on issues and PRs.
+- **Accessible.** WCAG 2.2 AA. An accessibility regression ranks first.
+- **Plain.** Short writing that says what is needed and stops.
 
 ## What's in it
 
 | Path | What it is |
 |---|---|
-| `AGENT-SETUP.md` | Step-by-step setup for an AI agent to follow. |
-| `CLAUDE.md` | The project charter every agent reads: who maintains it, and the standards. |
-| `agents/` | One file per seat: [triage](agents/triage.md), [maintainer](agents/maintainer.md) and its [cron prompt](agents/maintainer-cron.md), [reviewer](agents/reviewer.md), and a [specialist template](agents/specialist.md). The [safety rails](agents/rails.md) and their values ([rails.conf](agents/rails.conf)). |
-| `.github/workflows/code-review.yml` | The reviewer. Reads its instructions from the base branch. Always posts a verdict, even when cut off. |
-| `.github/workflows/issue-triage.yml` | The triage agent. The model has no shell; a script checks its answer and posts it. |
-| `.github/workflows/ci.yml` | The required `checks` check. |
-| `.github/workflows/rails.yml` | The required `rails` check: PR size and the off switch. Runs from the base branch. |
+| [`AGENT-SETUP.md`](AGENT-SETUP.md) | Setup steps for an AI agent to follow. |
+| [`docs/getting-started.md`](docs/getting-started.md) | The same setup, for a person. |
+| [`CLAUDE.md`](CLAUDE.md) | The charter every agent reads: who maintains the project, and the standards. |
+| [`agents/`](agents/README.md) | One file per agent, and the [safety rails](agents/rails.md). |
+| `.github/workflows/` | Triage, review, CI (`checks`) and the `rails` check. |
 | `.github/scripts/checks.sh` | The project's checks, shared by CI and the reviewer. |
-| `.claude/` | Hooks that give each session its own git worktree and clean it up after merge. |
-| `templates/` | The maintainer's local state file, and the project README. |
-| `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue forms | Community files, accessibility first. |
+| `.claude/` | Hooks that give each agent session its own git worktree. |
+| `scripts/adopt.sh` | Copies the template into a project and fills in its names. Never overwrites a file. |
 
 ## Where this is going
 
-- More seats ported from equalify-iris: an issue-to-PR builder.
-- A GitHub App per seat, instead of a machine account.
-- A way to start, watch and renew every project's maintainer from one place.
+This setup comes from running [equalify-iris](https://github.com/EqualifyEverything/equalify-iris) and [equalify-iris-pdf](https://github.com/EqualifyEverything/equalify-iris-pdf) this way. The goal is a whole AI-Powered Software Factory: automated maintenance of production code. Next:
+
+- An issue-to-PR builder, ported from equalify-iris.
+- A GitHub App per agent, instead of a second account.
+- One place to start, watch and renew every project's maintainer.
 
 ## License
 
