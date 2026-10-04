@@ -32,7 +32,7 @@ git clone https://github.com/UIC-OSF/agent-factory /tmp/agent-factory
 
 It never overwrites a file the project already has; it lists them for you to merge.
 
-Then follow [docs/setup.md](docs/setup.md): Bedrock access, the Claude app, branch protection, and starting the maintainer loop.
+Then follow [docs/getting-started.md](docs/getting-started.md): Bedrock access, the Claude app, branch protection, a test PR, and starting the maintainer.
 
 ## What's in it
 

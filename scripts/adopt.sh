@@ -37,7 +37,7 @@ KIT=(
   .github/workflows/code-review.yml .github/workflows/ci.yml
   .github/scripts/checks.sh
   .github/ISSUE_TEMPLATE .github/CODEOWNERS .github/pull_request_template.md .github/dependabot.yml
-  docs/setup.md templates/maintainer-state.md
+  docs/getting-started.md templates/maintainer-state.md
 )
 
 files=()     # files to fill placeholders in
@@ -83,4 +83,4 @@ if (( ${#skipped[@]} )); then
   printf '  %s\n' "${skipped[@]}"
 fi
 echo
-echo "Next: docs/setup.md, from step 1's second paragraph."
+echo "Next: docs/getting-started.md, from \"Then make it yours\"."

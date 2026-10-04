@@ -4,7 +4,7 @@ name: Code Review
 # are agents/reviewer.md, read from the PR's base branch so a PR cannot rewrite
 # its own review. From agent-factory; the guards come from equalify-iris.
 #
-# Setup (docs/setup.md):
+# Setup (docs/getting-started.md):
 #   - secret   AWS_BEDROCK_ROLE_ARN  — IAM role assumable via OIDC with
 #     bedrock:InvokeModel / InvokeModelWithResponseStream on the review model. Its
 #     trust policy must allow repo:{{REPO}}:pull_request and :ref:refs/heads/*.
