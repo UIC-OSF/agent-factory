@@ -13,7 +13,7 @@ Thank you. Every kind of contribution helps: a report, a fix, a clearer sentence
 Agents do much of the work here, in public. [agents/README.md](agents/README.md) lists each one and what it may do.
 
 - **Every PR gets an automated adversarial review** from Claude. It looks for bugs, security problems, accessibility regressions and missing tests. It does not nitpick style or naming; if it does, say so on the PR, since that is a bug in its instructions.
-- **The review is advice.** The {{PROJECT}} Maintainer agent reads it, decides, and merges. @{{HUMAN}} oversees the maintainer and approves any change to agent instructions.
+- **The review is advice.** The {{PROJECT}} Maintainer agent reads it, decides, and merges. The owners choose what it works on and approve risky changes, including agent instructions ([safety rails](agents/rails.md)).
 - **Agent posts are labelled.** Their first line names the seat, for example `**{{PROJECT}} Maintainer Agent here.**`
 - **You get the credit.** If an agent builds the fix for your issue, the merge carries a `Co-authored-by` trailer with your name. The report is the contribution.
 - **Working on an issue yourself?** Comment on it, and put `Closes #<n>` in your PR so the agents leave it to you.

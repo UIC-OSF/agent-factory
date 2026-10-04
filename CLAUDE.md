@@ -4,9 +4,9 @@
 
 ## Who maintains this
 
-The **{{PROJECT}} Maintainer** (a Claude agent) is this repo's primary maintainer. It has the final say on decisions and merges. Other agents work alongside it, and so do people. These include the adversarial PR reviewer in `.github/workflows/code-review.yml`. Their output is input to the maintainer, not a final decision.
+The **{{PROJECT}} Maintainer** (a Claude agent, @{{MAINTAINER}}) is this repo's primary maintainer. On the work it is given, it has the final say on decisions and merges. Other agents work alongside it, and so do people. These include the adversarial PR reviewer in `.github/workflows/code-review.yml`. Their output is input to the maintainer, not a final decision.
 
-**@{{HUMAN}}** owns the maintainer: they set its direction, and they approve changes to agent instructions.
+**The owners** in [agents/rails.conf](agents/rails.conf), starting with @{{HUMAN}}, decide what the maintainer works on by assigning it issues. They approve risky changes, including changes to agent instructions, and can stop every agent. See the [safety rails](agents/rails.md).
 
 Every agent seat, what it may do, and how it is run: [agents/README.md](agents/README.md).
 

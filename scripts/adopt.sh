@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Put agent-factory's agent setup into a repo and fill in its placeholders.
+# Put the agent setup from UIC OSF's Agent Factory Building Blocks into a repo and fill in its placeholders.
 #
-#   scripts/adopt.sh <target> --project NAME --repo OWNER/NAME --human LOGIN [--description TEXT]
+#   scripts/adopt.sh <target> --project NAME --repo OWNER/NAME --human LOGIN --maintainer LOGIN [--description TEXT]
+#
+# --human is the first owner. --maintainer is the maintainer agent's own GitHub account.
 #
 # Target "." in a repo made from this template: fills placeholders in place and
 # replaces this README with the project's.
@@ -9,21 +11,22 @@
 # already has are never overwritten; they are listed for you to merge by hand.
 set -euo pipefail
 
-usage() { sed -n 2,9p "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n 2,12p "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 [[ $# -ge 1 ]] || usage
 target=$1; shift
-project="" repo="" human="" description=""
+project="" repo="" human="" maintainer="" description=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --project) project=$2; shift 2 ;;
     --repo) repo=$2; shift 2 ;;
     --human) human=${2#@}; shift 2 ;;
+    --maintainer) maintainer=${2#@}; shift 2 ;;
     --description) description=$2; shift 2 ;;
     *) usage ;;
   esac
 done
-[[ -n "$project" && -n "$human" && "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || usage
+[[ -n "$project" && -n "$human" && -n "$maintainer" && "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || usage
 [[ -n "$description" ]] || description="<!-- One plain sentence: what $project does and for whom. -->"
 slug=$(printf '%s' "${repo#*/}" | tr '[:upper:]' '[:lower:]')
 
@@ -35,7 +38,8 @@ KIT=(
   agents
   .claude/settings.json .claude/scripts .claude/commands
   .github/workflows/code-review.yml .github/workflows/ci.yml
-  .github/scripts/checks.sh
+  .github/workflows/rails.yml .github/workflows/issue-triage.yml
+  .github/scripts/checks.sh .github/scripts/rails.sh .github/scripts/triage-act.sh
   .github/ISSUE_TEMPLATE .github/CODEOWNERS .github/pull_request_template.md .github/dependabot.yml
   docs/getting-started.md templates/maintainer-state.md
 )
@@ -71,8 +75,9 @@ fi
 
 # Values go through the environment, so no character in them is special to perl.
 for f in "${files[@]}"; do
-  P="$project" R="$repo" H="$human" D="$description" S="$slug" perl -pi -e '
+  P="$project" R="$repo" H="$human" M="$maintainer" D="$description" S="$slug" perl -pi -e '
     s/\{\{PROJECT\}\}/$ENV{P}/g; s/\{\{REPO\}\}/$ENV{R}/g; s/\{\{HUMAN\}\}/$ENV{H}/g;
+    s/\{\{MAINTAINER\}\}/$ENV{M}/g;
     s/\{\{DESCRIPTION\}\}/$ENV{D}/g; s/\{\{SLUG\}\}/$ENV{S}/g' "$dst/$f"
 done
 

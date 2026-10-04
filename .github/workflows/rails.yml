@@ -1,0 +1,34 @@
+name: Rails
+
+# The `rails` required check: PR size and the off switch (agents/rails.md).
+# pull_request_target runs this file and agents/rails.conf from the base branch,
+# so a PR cannot edit the check it is held to. That is safe only because the job
+# never checks out or runs the PR's code. Keep it that way.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions: {}
+
+jobs:
+  rails:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      # The base branch. Never add a ref to the PR here.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Rails
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          AGENTS_PAUSED: ${{ vars.AGENTS_PAUSED }}
+        run: bash .github/scripts/rails.sh

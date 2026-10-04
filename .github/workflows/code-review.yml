@@ -2,7 +2,7 @@ name: Code Review
 
 # Adversarial PR review by Claude on AWS Bedrock. The reviewer's instructions
 # are agents/reviewer.md, read from the PR's base branch so a PR cannot rewrite
-# its own review. From agent-factory; the guards come from equalify-iris.
+# its own review. From UIC OSF's Agent Factory Building Blocks; the guards come from equalify-iris.
 #
 # Setup (docs/getting-started.md):
 #   - secret   AWS_BEDROCK_ROLE_ARN  — IAM role assumable via OIDC with
@@ -36,10 +36,11 @@ concurrency:
 
 jobs:
   review:
-    # Skip drafts, dependabot and forks (a fork's `pull_request` gets no secrets).
+    # Skip when paused (agents/rails.md), drafts, dependabot and forks (a fork's `pull_request` gets no secrets).
     # Review a fork PR by dispatch — `gh workflow run code-review.yml -f pr_number=<n>` —
     # after reading its diff: that runs the fork's code in a job holding the Bedrock role.
     if: >-
+      vars.AGENTS_PAUSED != 'true' &&
       github.actor != 'dependabot[bot]' &&
       (github.event_name == 'workflow_dispatch' ||
        ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) &&
@@ -353,7 +354,10 @@ jobs:
           use_bedrock: "true"
           allowed_bots: "claude"
           # display_report unset: it would double-submit alongside `gh pr review`.
+          # `--setting-sources user`: do not load the PR's `.claude/` settings or
+          # hooks, which would run the PR's code in this job.
           claude_args: >-
+            --setting-sources user
             --allowedTools Bash(*),Read(*),Glob,Grep
             --model ${{ vars.BEDROCK_REVIEW_MODEL || 'us.anthropic.claude-opus-5' }}
           prompt: |
