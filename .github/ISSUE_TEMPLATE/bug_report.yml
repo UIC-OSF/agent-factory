@@ -1,0 +1,32 @@
+name: Bug report
+description: Something isn't working as expected (not accessibility-specific).
+title: "[bug]: <short description>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for the report. For accessibility barriers, please use the Accessibility issue template instead."
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Environment / context
+      description: Version, OS, browser, and anything from logs.
+    validations:
+      required: false

@@ -1,0 +1,8 @@
+version: 2
+updates:
+  # Keeps the SHA-pinned actions current. Add one entry per package ecosystem
+  # the project uses (npm, pip, docker, ...).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

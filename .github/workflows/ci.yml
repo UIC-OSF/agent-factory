@@ -1,0 +1,29 @@
+name: CI
+
+# The required check. Runs .github/scripts/checks.sh, the same file the review
+# workflow reports on. Add project setup (language toolchain, installs) above
+# the checks step.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Checks
+        run: bash .github/scripts/checks.sh

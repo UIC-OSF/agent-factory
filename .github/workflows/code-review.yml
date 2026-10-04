@@ -1,0 +1,429 @@
+name: Code Review
+
+# Adversarial PR review by Claude on AWS Bedrock. The reviewer's instructions
+# are agents/reviewer.md, read from the PR's base branch so a PR cannot rewrite
+# its own review. From agent-factory; the guards come from equalify-iris.
+#
+# Setup (docs/setup.md):
+#   - secret   AWS_BEDROCK_ROLE_ARN  — IAM role assumable via OIDC with
+#     bedrock:InvokeModel / InvokeModelWithResponseStream on the review model. Its
+#     trust policy must allow repo:{{REPO}}:pull_request and :ref:refs/heads/*.
+#   - variable BEDROCK_REVIEW_MODEL (optional) — inference-profile ID; default below.
+#   - variable AWS_REGION (optional) — default us-east-2.
+#   - The Claude GitHub App installed on this repo, so reviews post as claude[bot].
+#
+# Identity: claude-code-action swaps its OIDC token for a Claude App token, and
+# that exchange refuses while this file differs from the default-branch copy — the
+# action then skips itself. So a PR that edits this file is reviewed under an
+# explicit GITHUB_TOKEN (posting as github-actions[bot]); every other PR is not.
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    paths-ignore:
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+
+concurrency:
+  group: code-review-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # Skip drafts, dependabot and forks (a fork's `pull_request` gets no secrets).
+    # Review a fork PR by dispatch — `gh workflow run code-review.yml -f pr_number=<n>` —
+    # after reading its diff: that runs the fork's code in a job holding the Bedrock role.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name == 'workflow_dispatch' ||
+       ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) &&
+        github.event.pull_request.head.repo.full_name == github.repository))
+    runs-on: ubuntu-latest
+    # Must exceed the model step's cap below, or a timeout cancels the fallback too.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve PR + head sha
+        id: ctx
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PR_NUMBER="${{ inputs.pr_number }}"
+            META=$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER")
+            HEAD_SHA=$(echo "$META" | jq -r .head.sha)
+            BASE_REF=$(echo "$META" | jq -r .base.ref)
+            BASE_SHA=$(echo "$META" | jq -r .base.sha)
+            git fetch origin "pull/$PR_NUMBER/head:pr-$PR_NUMBER"
+            git checkout "pr-$PR_NUMBER"
+          else
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            BASE_REF="${{ github.event.pull_request.base.ref }}"
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          fi
+          if gh pr diff "$PR_NUMBER" --name-only | grep -qx '.github/workflows/code-review.yml'; then
+            echo "changed_workflow=code-review.yml" >> "$GITHUB_OUTPUT"
+            # Single-quoted: the escaped open-expression on the `github.event.*` line
+            # must survive Actions substitution without bash expanding it.
+            {
+              echo '### This PR changes `code-review.yml` — its review runs on the fallback token'
+              echo
+              echo 'The review still runs, but posts as **github-actions[bot]** rather than claude[bot].'
+              echo
+              echo '**Read the workflow diff yourself anyway.** The reviewer is reviewing the file that'
+              echo 'decides whether anything gets reviewed. Check whether it lets PR-authored code run'
+              echo 'with secrets, widens `permissions:`, interpolates attacker-controlled'
+              echo '`${{ '${{' }} github.event.* }}` into a `run:` block, or weakens `Verify a review was posted`.'
+              echo
+              echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            } > /tmp/workflow-notice.md
+            cat /tmp/workflow-notice.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed_workflow=none" >> "$GITHUB_OUTPUT"
+          fi
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$HEAD_SHA"   >> "$GITHUB_OUTPUT"
+          echo "base_ref=$BASE_REF"   >> "$GITHUB_OUTPUT"
+          echo "base_sha=$BASE_SHA"   >> "$GITHUB_OUTPUT"
+
+      - name: Skip if a review already exists for this commit
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.ctx.outputs.pr_number }}
+          HEAD_SHA: ${{ steps.ctx.outputs.head_sha }}
+          SELF_EDIT: ${{ contains(steps.ctx.outputs.changed_workflow, 'code-review.yml') }}
+        run: |
+          set -euo pipefail
+          # github-actions[bot] counts only on a self-editing PR, the one place a model
+          # review posts under it. Fallback reviews never count: re-running to replace
+          # one must not be a no-op.
+          FALLBACK='## Automated review did not complete'
+          if [ "${SELF_EDIT:-false}" = "true" ]; then
+            LOGINS='["claude[bot]","github-actions[bot]"]'
+          else
+            LOGINS='["claude[bot]"]'
+          fi
+          COUNT=$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/reviews" --paginate \
+            | jq --arg f "$FALLBACK" --arg sha "$HEAD_SHA" --argjson logins "$LOGINS" \
+                '[.[] | select(.user.login | IN($logins[]))
+                      | select(.commit_id==$sha)
+                      | select(((.body // "") | startswith($f)) | not)] | length' \
+            | awk '{s+=$1} END {print s+0}')
+          if [ "${COUNT:-0}" -gt 0 ]; then
+            echo "already_reviewed=true" >> "$GITHUB_OUTPUT"
+            echo "A review already exists for $HEAD_SHA — skipping."
+          else
+            echo "already_reviewed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Say on the PR how its own review was produced
+        # Courtesy notice; must never block the review, hence continue-on-error.
+        if: >-
+          steps.guard.outputs.already_reviewed != 'true' &&
+          contains(steps.ctx.outputs.changed_workflow, 'code-review.yml')
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.ctx.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          # One comment per PR, edited in place on later pushes.
+          MARKER='<!-- code-review: workflow-self-edit -->'
+          BODY=/tmp/workflow-notice-comment.md
+          { echo "$MARKER"; cat /tmp/workflow-notice.md; } > "$BODY"
+          # --jq runs per page, so take the first line in bash (not `| head`, which
+          # SIGPIPEs under pipefail).
+          IDS=$(gh api "repos/${{ github.repository }}/issues/$PR_NUMBER/comments" --paginate \
+            --jq "[.[] | select((.body // \"\") | contains(\"$MARKER\")) | .id] | first // empty")
+          ID=${IDS%%$'\n'*}
+          if [ -n "$ID" ]; then
+            gh api --method PATCH "repos/${{ github.repository }}/issues/comments/$ID" \
+              -f body="$(cat "$BODY")" --silent
+          else
+            gh pr comment "$PR_NUMBER" --body-file "$BODY"
+          fi
+
+      - name: Build review context
+        if: steps.guard.outputs.already_reviewed != 'true'
+        # Every check records pass/fail/skip into the context rather than failing the
+        # step: a red check is what the reviewer needs to see, and a non-zero exit here
+        # would skip the fallback and verify steps. Add the project's install / test
+        # commands to the "Checks" block as code lands, in the same pattern.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.ctx.outputs.pr_number }}
+          HEAD_SHA: ${{ steps.ctx.outputs.head_sha }}
+          BASE_REF: ${{ steps.ctx.outputs.base_ref }}
+          BASE_SHA: ${{ steps.ctx.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          OUT=/tmp/review-context.md
+          MAX_LINES_PER_FILE=800
+          MAX_BYTES_PER_FILE=120000
+          # Whole-file source only for files at least this % changed, or small ones.
+          MIN_CHANGED_PCT=15
+          ALWAYS_INCLUDE_UNDER_BYTES=8000
+          # Always in full, whatever the ratio: small diffs here are the risky ones.
+          # Agent instructions are here too: they steer the agent with final say.
+          ALWAYS_INCLUDE_PATHS=".github/ .claude/ agents/ CLAUDE.md"
+
+          {
+            echo "# Review context"
+            echo
+            echo "## PR metadata"
+            echo '```json'
+            gh pr view "$PR_NUMBER" --json number,title,author,body,baseRefName,headRefName
+            echo '```'
+          } > "$OUT"
+
+          # Earlier model reviews on previous commits, most recent 3, each capped, so a
+          # re-review builds on what was said instead of restarting from zero. Written
+          # to a file and `tail`ed: piping `gh` into `tail` would SIGPIPE under pipefail.
+          PRIOR_REVIEWS_MAX=3
+          PRIOR_BODY_MAX=8000
+          PRIOR_LINES=/tmp/prior-reviews.jsonl
+          if gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/reviews" --paginate \
+               --jq ".[] | select(.user.login==\"claude[bot]\" or .user.login==\"github-actions[bot]\")
+                        | select(.commit_id!=\"$HEAD_SHA\")
+                        | select(((.body // \"\") | startswith(\"## Automated review did not complete\")) | not)
+                        | {sha: .commit_id[0:7], state: .state, body: (.body // \"(empty)\")}
+                        | @json" \
+               > "$PRIOR_LINES" 2>/dev/null && [ -s "$PRIOR_LINES" ]; then
+            {
+              echo
+              echo "## Your earlier reviews of this PR (previous commits)"
+              echo
+              echo "- **Fixed** in the current head: say so in one line."
+              echo "- **Still present**: say it is unchanged since \`<sha>\`, briefly. If you have"
+              echo "  raised it twice and the author pushed past it, say so once and leave it to a human."
+              echo "- **Wrong**: withdraw it explicitly."
+              echo "- Do not hunt for new findings just because the diff changed."
+              echo
+              echo "Each starts at \`=== REVIEW <state> on commit <sha> ===\`; headings inside are that review's."
+              echo
+            } >> "$OUT"
+            tail -n "$PRIOR_REVIEWS_MAX" "$PRIOR_LINES" > /tmp/prior-recent.jsonl
+            jq -r --argjson max "$PRIOR_BODY_MAX" \
+              '"=== REVIEW \(.state) on commit \(.sha) ===\n\n\(.body[:$max])\n"
+               + (if (.body | length) > $max then "\n_[body truncated]_\n" else "" end)' \
+              /tmp/prior-recent.jsonl >> "$OUT"
+          fi
+
+          # --- Checks ---------------------------------------------------------------
+          # The project's checks live in .github/scripts/checks.sh, shared with CI.
+          # --report never exits non-zero and writes /tmp/check-summary.md for the
+          # fallback step. This runs the PR's own copy of the script, in a job that
+          # holds id-token: write: acceptable only because fork PRs are skipped above.
+          bash .github/scripts/checks.sh --report "$OUT" || echo "(checks.sh itself failed)" >> "$OUT"
+          [ -f /tmp/check-summary.md ] && cat /tmp/check-summary.md >> "$GITHUB_STEP_SUMMARY"
+          if grep -q ': fail$' /tmp/check-summary.md 2>/dev/null; then
+            echo "::warning::One or more checks failed — the review continues so Claude reports it."
+          fi
+
+          # --- Diff -----------------------------------------------------------------
+          # Against the PR's recorded base sha, not `merge-base origin/$BASE_REF HEAD`,
+          # which is empty once the base contains HEAD (e.g. a dispatch after merge).
+          MERGE_BASE="$BASE_SHA"
+          if ! git cat-file -e "$MERGE_BASE^{commit}" 2>/dev/null; then
+            echo "::warning::base sha $MERGE_BASE not found; falling back to merge-base against origin/$BASE_REF"
+            git fetch origin "$BASE_REF" || true
+            MERGE_BASE=$(git merge-base "origin/$BASE_REF" HEAD)
+          fi
+          {
+            echo
+            if [ -z "$(git diff --name-only "$MERGE_BASE"...HEAD)" ]; then
+              echo "## ⚠️ NO CHANGES TO REVIEW"
+              echo
+              echo "The diff against \`$MERGE_BASE\` is empty. **Do not approve.** Post one"
+              echo "\`--request-changes\` saying the PR could not be reviewed, and stop."
+              echo
+            fi
+            echo "## Changed files (base \`$MERGE_BASE\`)"
+            echo '```'
+            git diff --name-status "$MERGE_BASE"...HEAD
+            echo '```'
+            echo
+            echo "## Full diff"
+            echo '```diff'
+            git diff "$MERGE_BASE"...HEAD
+            echo '```'
+            echo
+            echo "## Full source of new / substantially-rewritten files"
+            echo
+            echo "Files changed by under ${MIN_CHANGED_PCT}% are omitted; Read them if needed."
+          } >> "$OUT"
+
+          # Marks a cut so a partial file is never read as whole. awk on stdin: an
+          # argument containing `=` would be read as an assignment.
+          emit_source() {
+            head -n "$MAX_LINES_PER_FILE" "$1" >> "$OUT"
+            N=$(awk 'END{print NR}' < "$1")
+            [ "${N:-0}" -le "$MAX_LINES_PER_FILE" ] || printf \
+              '\n... TRUNCATED at %s of %s lines. Read the file for the rest.\n' \
+              "$MAX_LINES_PER_FILE" "$N" >> "$OUT"
+          }
+
+          git diff --name-only --diff-filter=AM "$MERGE_BASE"...HEAD | while read -r f; do
+            [ -f "$f" ] || continue
+            if file --mime "$f" | grep -q 'charset=binary'; then
+              printf '\n### %s\n\n_(binary — skipped)_\n' "$f" >> "$OUT"
+              continue
+            fi
+            BYTES=$(wc -c < "$f" | tr -d ' ')
+            if [ "$BYTES" -gt "$MAX_BYTES_PER_FILE" ]; then
+              printf '\n### %s\n\n_(%s bytes — too large, see diff above)_\n' "$f" "$BYTES" >> "$OUT"
+              continue
+            fi
+            FORCED=no
+            for p in $ALWAYS_INCLUDE_PATHS; do
+              case "$f" in "$p"*) FORCED=yes; break ;; esac
+            done
+            if [ "$FORCED" = no ] && [ "$BYTES" -gt "$ALWAYS_INCLUDE_UNDER_BYTES" ]; then
+              CHANGED=$(git diff --numstat "$MERGE_BASE"...HEAD -- "$f" | awk '{print $1 + $2}')
+              LINES=$(wc -l < "$f" | tr -d ' ')
+              PCT=100
+              [ "${LINES:-0}" -eq 0 ] || PCT=$(( ${CHANGED:-0} * 100 / LINES ))
+              if [ "$PCT" -lt "$MIN_CHANGED_PCT" ]; then
+                printf '\n### %s\n\n_(%s%% of %s lines changed — see diff)_\n' "$f" "$PCT" "$LINES" >> "$OUT"
+                continue
+              fi
+            fi
+            printf '\n### %s\n\n```\n' "$f" >> "$OUT"
+            emit_source "$f"
+            printf '\n```\n' >> "$OUT"
+          done
+
+          echo "context: $(wc -c < "$OUT" | tr -d ' ') bytes"
+
+      - name: Load reviewer instructions from the base branch
+        if: steps.guard.outputs.already_reviewed != 'true'
+        env:
+          BASE_SHA: ${{ steps.ctx.outputs.base_sha }}
+        run: |
+          set -uo pipefail
+          # From the base, not the PR head: a PR must not be able to rewrite the
+          # instructions it is reviewed under. Falls back to the head copy only
+          # when the base has none (the PR that adds the file).
+          if git show "$BASE_SHA:agents/reviewer.md" > /tmp/reviewer.md 2>/dev/null; then
+            echo "reviewer instructions: base $BASE_SHA"
+          elif [ -f agents/reviewer.md ]; then
+            cp agents/reviewer.md /tmp/reviewer.md
+            echo "::warning::agents/reviewer.md is not on the base branch; using the PR's copy."
+          else
+            echo "Review this PR adversarially for correctness, security, accessibility and tests." > /tmp/reviewer.md
+            echo "::warning::No agents/reviewer.md found; using a one-line default."
+          fi
+
+      - name: Configure AWS credentials (OIDC)
+        if: steps.guard.outputs.already_reviewed != 'true'
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6
+        with:
+          role-to-assume: ${{ secrets.AWS_BEDROCK_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-2' }}
+
+      - name: Claude review
+        id: claude
+        if: steps.guard.outputs.already_reviewed != 'true'
+        # A step timeout fails only this step, so the fallback still posts a verdict.
+        # `bun install` inside the action (up to ~3 min) counts against these 22.
+        timeout-minutes: 22
+        continue-on-error: true
+        uses: anthropics/claude-code-action@cab360f6565aa35a51d6ce9e43f1f4287c0a32ea # v1
+        with:
+          # Non-empty only on a self-editing PR; see the header comment.
+          github_token: ${{ contains(steps.ctx.outputs.changed_workflow, 'code-review.yml') && secrets.GITHUB_TOKEN || '' }}
+          use_bedrock: "true"
+          allowed_bots: "claude"
+          # display_report unset: it would double-submit alongside `gh pr review`.
+          claude_args: >-
+            --allowedTools Bash(*),Read(*),Glob,Grep
+            --model ${{ vars.BEDROCK_REVIEW_MODEL || 'us.anthropic.claude-opus-5' }}
+          prompt: |
+            Review PR #${{ steps.ctx.outputs.pr_number }} (head ${{ steps.ctx.outputs.head_sha }}) in
+            ${{ github.repository }}.
+
+            Your instructions are in `/tmp/reviewer.md`. Read it first and follow it exactly.
+            The review context it refers to is `/tmp/review-context.md`. Post your review with
+            `gh pr review ${{ steps.ctx.outputs.pr_number }}`.
+
+      - name: Fallback review if Claude was cut off
+        # Posts partial findings plus the check summary, as a review, so the PR always
+        # carries a verdict.
+        if: >-
+          steps.guard.outputs.already_reviewed != 'true' &&
+          steps.claude.outcome != 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.ctx.outputs.pr_number }}
+          HEAD_SHA: ${{ steps.ctx.outputs.head_sha }}
+          OUTCOME: ${{ steps.claude.outcome }}
+        run: |
+          set -euo pipefail
+          # The model may have posted and then failed; don't double-post.
+          COUNT=$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/reviews" --paginate \
+            --jq ".[] | select(.user.login==\"claude[bot]\" or .user.login==\"github-actions[bot]\")
+                      | select(.commit_id==\"$HEAD_SHA\") | .id" \
+            | wc -l | tr -d ' ')
+          if [ "${COUNT:-0}" -gt 0 ]; then
+            echo "A review already exists for $HEAD_SHA despite outcome=$OUTCOME — nothing to do."
+            exit 0
+          fi
+
+          BODY=/tmp/fallback-review.md
+          {
+            printf '## Automated review did not complete\n\n'
+            printf 'The review step ended with outcome `%s` (likely the 22-minute step timeout).\n' "$OUTCOME"
+          } > "$BODY"
+          if [ -s /tmp/review-findings.md ]; then
+            {
+              printf 'Findings recorded before it was cut off — **this list is incomplete**.\n\n---\n\n'
+              head -c 60000 /tmp/review-findings.md
+            } >> "$BODY"
+          else
+            printf 'No partial findings were recorded, so this PR has **not been reviewed**.\n' >> "$BODY"
+          fi
+          if [ -f /tmp/check-summary.md ]; then
+            { printf '\n\n---\n\n'; cat /tmp/check-summary.md; } >> "$BODY"
+          fi
+          printf '\n\nRe-run with: `gh workflow run code-review.yml -f pr_number=%s`\n' "$PR_NUMBER" >> "$BODY"
+          printf '\nAccessibility impact: not assessed — automated review was interrupted.\n' >> "$BODY"
+          # --request-changes: an incomplete review must not read as a pass.
+          gh pr review "$PR_NUMBER" --request-changes --body-file "$BODY"
+          echo "::warning::Claude review was cut off (outcome=$OUTCOME); posted a fallback review."
+
+      - name: Verify a review was posted
+        # The action can exit 0 without calling `gh pr review`. Fail loudly instead.
+        if: steps.guard.outputs.already_reviewed != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.ctx.outputs.pr_number }}
+          HEAD_SHA: ${{ steps.ctx.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          COUNT=$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/reviews" --paginate \
+            --jq ".[] | select(.user.login==\"claude[bot]\" or .user.login==\"github-actions[bot]\")
+                      | select(.commit_id==\"$HEAD_SHA\") | .id" \
+            | wc -l | tr -d ' ')
+          if [ "${COUNT:-0}" -eq 0 ]; then
+            echo "::error::No review posted for $HEAD_SHA. Re-run with: gh workflow run code-review.yml -f pr_number=$PR_NUMBER"
+            exit 1
+          fi
+          echo "review exists for $HEAD_SHA"
