@@ -46,7 +46,7 @@ skipped=()   # already in the target
 if [[ "$src" == "$dst" ]]; then
   while IFS= read -r f; do files+=("$f"); done < <(cd "$src" && find "${KIT[@]}" -type f)
   cp "$src/templates/README.md" "$src/README.md"
-  rm "$src/templates/README.md"
+  rm "$src/templates/README.md" "$src/AGENT-SETUP.md"
   files+=(README.md)
 else
   while IFS= read -r f; do

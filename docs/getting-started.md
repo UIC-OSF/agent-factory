@@ -2,6 +2,10 @@
 
 From nothing to a project whose PRs are reviewed by an agent and whose issues are worked by a maintainer agent. About 45 minutes, most of it AWS.
 
+**Faster:** ask your AI agent to do it. It runs every step it can and tells you what it needs from you:
+
+> Set up agent-factory for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
+
 ## What you need
 
 - Admin on the GitHub org the repo will live in.
@@ -70,7 +74,8 @@ Settings → Rules → new branch ruleset for `main`:
 
 - Require a pull request.
 - Require the status check `checks` (from `ci.yml`). Do not require the review: it is advice to the maintainer.
-- Restrict who can push to `main` to @your-login. That includes merging. The maintainer agent works under your login.
+- Who can merge is set by who has write access, not by the ruleset. Give write access to the person who oversees the maintainer, and have others contribute through forks. The maintainer agent works under that person's login.
+- Rulesets on private repos need a paid GitHub plan.
 - Do not require code-owner approval. GitHub does not let anyone approve their own PR, so it would block the maintainer.
 
 ## 5. Add labels

@@ -17,13 +17,17 @@ Open source, transparent, accessible, plain. Agent instructions are files in the
 
 ## Use it
 
-**New project:** click **Use this template** on GitHub, clone the new repo, then:
+**Easiest:** ask your AI agent. It works out the rest and asks you for what it needs:
+
+> Set up agent-factory for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
+
+**By hand, new project:** click **Use this template** on GitHub, clone the new repo, then:
 
 ```sh
 scripts/adopt.sh . --project "Name" --repo owner/name --human your-github-login --description "One line."
 ```
 
-**Existing project:**
+**By hand, existing project:**
 
 ```sh
 git clone https://github.com/UIC-OSF/agent-factory /tmp/agent-factory
@@ -38,6 +42,7 @@ Then follow [docs/getting-started.md](docs/getting-started.md): Bedrock access, 
 
 | Path | What it is |
 |---|---|
+| `AGENT-SETUP.md` | Step-by-step setup for an AI agent to follow. |
 | `CLAUDE.md` | The project charter every agent reads: who maintains it, and the standards. |
 | `agents/` | One file per seat: [maintainer](agents/maintainer.md), its [cron prompt](agents/maintainer-cron.md), [reviewer](agents/reviewer.md), and a [specialist template](agents/specialist.md). |
 | `.github/workflows/code-review.yml` | The reviewer. Reads its instructions from the base branch. Always posts a verdict, even when cut off. |
