@@ -4,7 +4,7 @@ From nothing to a project where agents triage issues, review PRs, and build the 
 
 **Faster:** ask your AI agent to do it. It runs every step it can and tells you what it needs from you:
 
-> Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
+> Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/software-factory-blocks/blob/main/AGENT-SETUP.md
 
 ## What you need
 
@@ -19,12 +19,12 @@ From nothing to a project where agents triage issues, review PRs, and build the 
 New project:
 
 ```sh
-gh repo create OWNER/NAME --template UIC-OSF/agent-factory --public --clone
+gh repo create OWNER/NAME --template UIC-OSF/software-factory-blocks --public --clone
 cd NAME
 scripts/adopt.sh . --project "Name" --repo OWNER/NAME --human your-github-login --maintainer agent-login --description "One plain sentence."
 ```
 
-Existing project: see [Use it](https://github.com/UIC-OSF/agent-factory#use-it) in the README. `adopt.sh` lists any files it did not overwrite; merge those by hand.
+Existing project: see [Use it](https://github.com/UIC-OSF/software-factory-blocks#use-it) in the README. `adopt.sh` lists any files it did not overwrite; merge those by hand.
 
 Then make it yours:
 

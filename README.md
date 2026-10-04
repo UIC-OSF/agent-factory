@@ -22,7 +22,7 @@ Open source, transparent, accessible, plain. Agent instructions are files in the
 
 **Easiest:** ask your AI agent. It works out the rest and asks you for what it needs:
 
-> Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
+> Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/software-factory-blocks/blob/main/AGENT-SETUP.md
 
 **By hand, new project:** click **Use this template** on GitHub, clone the new repo, then:
 
@@ -33,8 +33,8 @@ scripts/adopt.sh . --project "Name" --repo owner/name --human your-github-login 
 **By hand, existing project:**
 
 ```sh
-git clone https://github.com/UIC-OSF/agent-factory /tmp/agent-factory
-/tmp/agent-factory/scripts/adopt.sh path/to/project --project "Name" --repo owner/name --human your-github-login --maintainer agent-login
+git clone https://github.com/UIC-OSF/software-factory-blocks /tmp/software-factory-blocks
+/tmp/software-factory-blocks/scripts/adopt.sh path/to/project --project "Name" --repo owner/name --human your-github-login --maintainer agent-login
 ```
 
 It never overwrites a file the project already has; it lists them for you to merge.

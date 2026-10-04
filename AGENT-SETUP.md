@@ -4,7 +4,7 @@ You are an AI agent setting up UIC OSF's AI-Powered Software Factory Building Bl
 
 Your person can start you with:
 
-> Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
+> Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/software-factory-blocks/blob/main/AGENT-SETUP.md
 
 ## Rules for you
 
@@ -40,7 +40,7 @@ Check the tools: `gh auth status`, `aws --version`, `git --version`. `gh` must b
 **New repo:**
 
 ```sh
-gh repo create OWNER/NAME --template UIC-OSF/agent-factory --public --clone   # or --private
+gh repo create OWNER/NAME --template UIC-OSF/software-factory-blocks --public --clone   # or --private
 cd NAME
 scripts/adopt.sh . --project "NAME" --repo OWNER/NAME --human LOGIN --maintainer AGENT --description "SENTENCE"
 ```
@@ -48,8 +48,8 @@ scripts/adopt.sh . --project "NAME" --repo OWNER/NAME --human LOGIN --maintainer
 **Existing project:**
 
 ```sh
-git clone --depth 1 https://github.com/UIC-OSF/agent-factory /tmp/agent-factory
-/tmp/agent-factory/scripts/adopt.sh PATH --project "NAME" --repo OWNER/NAME --human LOGIN --maintainer AGENT --description "SENTENCE"
+git clone --depth 1 https://github.com/UIC-OSF/software-factory-blocks /tmp/software-factory-blocks
+/tmp/software-factory-blocks/scripts/adopt.sh PATH --project "NAME" --repo OWNER/NAME --human LOGIN --maintainer AGENT --description "SENTENCE"
 ```
 
 A new repo's files can take a few seconds to appear. If the clone is empty, wait 10 seconds and run `git pull`.
@@ -174,7 +174,7 @@ This step needs Claude Code, on a machine that stays on. The maintainer must act
 1. Clone the repo to `~/agents/NAME` and set the agent's git identity: step 2 of [Start the maintainer](docs/getting-started.md#7-start-the-maintainer).
 2. If you are not Claude Code, give the person this prompt to paste into Claude Code started in `~/agents/NAME`, and stop:
 
-   > Start the maintainer for this repo. Follow step 7 of https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
+   > Start the maintainer for this repo. Follow step 7 of https://github.com/UIC-OSF/software-factory-blocks/blob/main/AGENT-SETUP.md
 
 If you are Claude Code started in `~/agents/NAME`:
 
