@@ -2,7 +2,7 @@ name: Code Review
 
 # Adversarial PR review by Claude on AWS Bedrock. The reviewer's instructions
 # are agents/reviewer.md, read from the PR's base branch so a PR cannot rewrite
-# its own review. From UIC OSF's Agent Factory Building Blocks; the guards come from equalify-iris.
+# its own review. From UIC OSF's AI-Powered Software Factory Building Blocks; the guards come from equalify-iris.
 #
 # Setup (docs/getting-started.md):
 #   - secret   AWS_BEDROCK_ROLE_ARN  — IAM role assumable via OIDC with

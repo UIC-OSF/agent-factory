@@ -1,10 +1,10 @@
-# UIC OSF's Agent Factory Building Blocks: setup directive for AI agents
+# UIC OSF's AI-Powered Software Factory Building Blocks: setup directive for AI agents
 
-You are an AI agent setting up UIC OSF's Agent Factory Building Blocks for a person. Follow this file top to bottom. It works for any agent that can run shell commands. Step 7 needs Claude Code.
+You are an AI agent setting up UIC OSF's AI-Powered Software Factory Building Blocks for a person. Follow this file top to bottom. It works for any agent that can run shell commands. Step 7 needs Claude Code.
 
 Your person can start you with:
 
-> Set up UIC OSF's Agent Factory Building Blocks for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
+> Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
 
 ## Rules for you
 

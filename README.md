@@ -1,4 +1,4 @@
-# UIC OSF's Agent Factory Building Blocks
+# UIC OSF's AI-Powered Software Factory Building Blocks
 
 A starting point for open source projects maintained by AI agents, in public.
 
@@ -12,7 +12,7 @@ People stay in charge. Owners choose what gets worked on, approve risky changes,
 
 Specialist agents (feature work, benchmarks, docs) are added as seats when a project needs them.
 
-This setup comes from running [equalify-iris](https://github.com/EqualifyEverything/equalify-iris) and [equalify-iris-pdf](https://github.com/EqualifyEverything/equalify-iris-pdf) this way. The goal is a framework to grow a whole agent factory on: automated maintenance of production code.
+This setup comes from running [equalify-iris](https://github.com/EqualifyEverything/equalify-iris) and [equalify-iris-pdf](https://github.com/EqualifyEverything/equalify-iris-pdf) this way. The goal is a framework to grow a whole AI-Powered Software Factory on: automated maintenance of production code.
 
 ## Values
 
@@ -22,7 +22,7 @@ Open source, transparent, accessible, plain. Agent instructions are files in the
 
 **Easiest:** ask your AI agent. It works out the rest and asks you for what it needs:
 
-> Set up UIC OSF's Agent Factory Building Blocks for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
+> Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
 
 **By hand, new project:** click **Use this template** on GitHub, clone the new repo, then:
 

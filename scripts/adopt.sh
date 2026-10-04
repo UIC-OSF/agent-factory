@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Put the agent setup from UIC OSF's Agent Factory Building Blocks into a repo and fill in its placeholders.
+# Put the agent setup from UIC OSF's AI-Powered Software Factory Building Blocks into a repo and fill in its placeholders.
 #
 #   scripts/adopt.sh <target> --project NAME --repo OWNER/NAME --human LOGIN --maintainer LOGIN [--description TEXT]
 #

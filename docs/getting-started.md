@@ -1,10 +1,10 @@
-# Getting started with UIC OSF's Agent Factory Building Blocks
+# Getting started with UIC OSF's AI-Powered Software Factory Building Blocks
 
 From nothing to a project where agents triage issues, review PRs, and build the work its owners assign. About 45 minutes, most of it AWS.
 
 **Faster:** ask your AI agent to do it. It runs every step it can and tells you what it needs from you:
 
-> Set up UIC OSF's Agent Factory Building Blocks for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
+> Set up UIC OSF's AI-Powered Software Factory Building Blocks for me. Follow https://github.com/UIC-OSF/agent-factory/blob/main/AGENT-SETUP.md
 
 ## What you need
 
